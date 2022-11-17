@@ -28,11 +28,13 @@ We provide 3 ways to run the software framework: **local installation**, **virtu
 | Platform                | [Local](#computer-local-installation) &nbsp; &nbsp; | [VM](#cloud-virtual-machine) &nbsp; &nbsp; | [Docker](#whale-docker) &nbsp; &nbsp; |
 | --------------------------- | ----------------- | ------------------| -----------------|
 | **Ubuntu** 18.04/20.04      | :heavy_check_mark:| :heavy_check_mark:|:heavy_check_mark:|
-| **MacOS** 10.13 or higher   | :heavy_check_mark:| :heavy_check_mark:|:heavy_check_mark:|
+| **MacOS** 10.13 or higher   | :heavy_check_mark:| :heavy_check_mark:<sup>2</sup>|:heavy_check_mark:|
 | **Windows**                 | :heavy_multiplication_x:<sup>1</sup> | :heavy_check_mark:|:heavy_check_mark:|
 
 <sup>1</sup>: _It is possible to run the CommonRoad software on Windows, however, the evaluation of submissions from Windows on our server
 has not been tested. We therefore don't recommend a local installation on Windows for this exercise._
+
+<sup>2</sup>: _The VM image has only been tested on MacOS with an Intel chip. **For Macs with M1 chip we can not provide a VM at the moment**. We therefore recommend the other two options._
 
 
 ## :computer: Local installation
@@ -87,7 +89,7 @@ If you are using PyCharm, set **commonroad-py37** as environment in PyCharm as w
 
 ## :cloud: Virtual machine
 A [VirtualBox](https://www.virtualbox.org/) image is available in which all the necessary packages have been installed. 
-The virtual machine image can be downloaded via [this](https://nextcloud.in.tum.de/index.php/s/2BspiYon9KmHf75) link. 
+The virtual machine image can be downloaded via [this](https://syncandshare.lrz.de/getlink/fiSp5VWNaA17aePvZvNZZR/LUbuntu18.04_VirturalBox_2021AI%5B01.12.21%5D.zip) link. 
 The downloading and the default login passwords are both `commonroad`. 
 You can update to the latest commit with typing the command in the `commonroad-search/` folder:
 
