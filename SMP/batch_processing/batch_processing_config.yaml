@@ -15,6 +15,9 @@ setting:
   create_gif: False
   output_path_gif: ../../outputs/gifs
 
+  # decide whether print more information about the result
+  verbose: False
+
   # choose the number of parallel executions of motion planners
   # the valid range is [1, max number of cpus on your system]
   num_worker_processes: 6

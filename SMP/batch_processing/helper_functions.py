@@ -521,8 +521,9 @@ def save_gif2(scenario: Scenario, planning_problem: PlanningProblem, trajectory:
 
         scenario.draw(renderer)
         planning_problem.draw(renderer)
-        dynamic_obstacle.draw(renderer, draw_params={'time_begin': 0,
-                                                     'dynamic_obstacle': {'shape': {'facecolor': 'green'}}})
+        renderer.draw_params.time_begin = 0
+        renderer.draw_params.dynamic_obstacle.vehicle_shape.occupancy.shape.facecolor = "green"
+        dynamic_obstacle.draw(renderer)
 
         fig.tight_layout()
         renderer.render()
@@ -530,11 +531,12 @@ def save_gif2(scenario: Scenario, planning_problem: PlanningProblem, trajectory:
 
     def animate_plot(frame):
         renderer = MPRenderer(plot_limits=dict_plot_limits[frame])
-
-        scenario.draw(renderer, draw_params={'time_begin': frame})
+        renderer.draw_params.time_begin = frame
+        scenario.draw(renderer)
         planning_problem.draw(renderer)
-        dynamic_obstacle.draw(renderer, draw_params={'time_begin': frame,
-                                                     'dynamic_obstacle': {'shape': {'facecolor': 'green'}}})
+        renderer.draw_params.time_begin = frame
+        renderer.draw_params.dynamic_obstacle.vehicle_shape.occupancy.shape.facecolor = "green"
+        dynamic_obstacle.draw(renderer)
 
         renderer.render()
         return (ln,)

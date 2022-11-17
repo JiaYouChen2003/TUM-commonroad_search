@@ -1,6 +1,6 @@
 from typing import List
 from SMP.maneuver_automaton.motion_primitive import MotionPrimitive
-from commonroad.scenario.trajectory import State
+from commonroad.scenario.state import KSState
 
 
 class Node:
@@ -8,7 +8,7 @@ class Node:
     Class for nodes used in the motion planners.
     """
 
-    def __init__(self, list_paths: List[List[State]], list_primitives: List[MotionPrimitive], depth_tree: int):
+    def __init__(self, list_paths: List[List[KSState]], list_primitives: List[MotionPrimitive], depth_tree: int):
         """
         Initialization of class Node.
         """
@@ -31,7 +31,7 @@ class PriorityNode(Node):
     Class for nodes with priorities used in the motion planners.
     """
 
-    def __init__(self, list_paths: List[List[State]], list_primitives: List[MotionPrimitive], depth_tree: int,
+    def __init__(self, list_paths: List[List[KSState]], list_primitives: List[MotionPrimitive], depth_tree: int,
                  priority: float):
         """
         Initialization of class PriorityNode.

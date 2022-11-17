@@ -40,6 +40,7 @@ class ManeuverAutomaton(object):
         self.dict_primitives = dict()
         self.type_vehicle = type_vehicle
 
+
         self.shape_ego = None
         if self.type_vehicle == VehicleType.FORD_ESCORT:
             self.shape_ego = Rectangle(length=4.298, width=1.674)

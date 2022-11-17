@@ -1,8 +1,9 @@
 import copy
+import time
 from abc import ABC
 from typing import Tuple, Union, Dict, List, Any
 
-from commonroad.scenario.trajectory import State
+from commonroad.scenario.state import KSState
 
 from SMP.maneuver_automaton.motion_primitive import MotionPrimitive
 from SMP.motion_planner.node import Node
@@ -11,6 +12,7 @@ from SMP.motion_planner.queue import FIFOQueue, LIFOQueue
 from SMP.motion_planner.search_algorithms.base_class import SearchBaseClass
 from SMP.motion_planner.utility import MotionPrimitiveStatus, initial_visualization, update_visualization
 
+import SMP.batch_processing.timeout_config
 
 class SequentialSearch(SearchBaseClass, ABC):
     """
@@ -24,8 +26,9 @@ class SequentialSearch(SearchBaseClass, ABC):
     def __init__(self, scenario, planningProblem, automaton, plot_config=DefaultPlotConfig):
         super().__init__(scenario=scenario, planningProblem=planningProblem, automaton=automaton,
                          plot_config=plot_config)
-
-    def execute_search(self) -> Tuple[Union[None, List[List[State]]], Union[None, List[MotionPrimitive]], Any]:
+        
+    
+    def execute_search(self) -> Tuple[Union[None, List[List[KSState]]], Union[None, List[MotionPrimitive]], Any]:
         """
         Implementation of BFS/DFS (tree search) using a FIFO/LIFO queue.
         The adopted frontiers are determined in children classes
@@ -56,7 +59,11 @@ class SequentialSearch(SearchBaseClass, ABC):
                                                 count=len(list_status_nodes))
         list_status_nodes.append(copy.copy(dict_node_status))
 
+        start_time = time.perf_counter()
         while not self.frontier.empty():
+            if SMP.batch_processing.timeout_config.use_sequential_processing:
+                if (time.perf_counter() - start_time) >= SMP.batch_processing.timeout_config.timeout:
+                    raise Exception('Time Out')
             # pop the deepest/shallowest node
             node_current = self.frontier.pop()
 

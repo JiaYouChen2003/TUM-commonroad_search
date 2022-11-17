@@ -1,9 +1,10 @@
 import copy
+import time
 import numpy as np
 from abc import abstractmethod, ABC
 from typing import Tuple, Dict, Any, List, Union
 
-from commonroad.scenario.trajectory import State
+from commonroad.scenario.state import KSState
 
 from SMP.maneuver_automaton.motion_primitive import MotionPrimitive
 from SMP.motion_planner.node import PriorityNode
@@ -11,7 +12,7 @@ from SMP.motion_planner.plot_config import DefaultPlotConfig
 from SMP.motion_planner.utility import MotionPrimitiveStatus, initial_visualization, update_visualization
 from SMP.motion_planner.queue import PriorityQueue
 from SMP.motion_planner.search_algorithms.base_class import SearchBaseClass
-
+import SMP.batch_processing.timeout_config
 
 class BestFirstSearch(SearchBaseClass, ABC):
     """
@@ -54,7 +55,8 @@ class BestFirstSearch(SearchBaseClass, ABC):
             else:
                 return self.calc_euclidean_distance(current_node=node_current) / velocity
 
-    def execute_search(self) -> Tuple[Union[None, List[List[State]]], Union[None, List[MotionPrimitive]], Any]:
+
+    def execute_search(self) -> Tuple[Union[None, List[List[KSState]]], Union[None, List[MotionPrimitive]], Any]:
         """
         Implementation of Best First Search (tree search) using a Priority queue.
         The evaluation function of each child class is implemented individually.
@@ -80,7 +82,11 @@ class BestFirstSearch(SearchBaseClass, ABC):
                                                  count=len(list_status_nodes))
         list_status_nodes.append(copy.copy(dict_status_nodes))
 
+        start_time = time.perf_counter()
         while not self.frontier.empty():
+            if SMP.batch_processing.timeout_config.use_sequential_processing:
+                if (time.perf_counter() - start_time) >= SMP.batch_processing.timeout_config.timeout:
+                    raise Exception('Time Out')
             # pop the last node
             node_current = self.frontier.pop()
 

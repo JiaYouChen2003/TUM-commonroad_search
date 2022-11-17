@@ -2,6 +2,7 @@ import os
 import copy
 import random
 import warnings
+from copy import deepcopy
 
 warnings.filterwarnings("ignore")
 
@@ -14,10 +15,11 @@ import yaml
 import xml.etree.ElementTree as et
 from xml.dom import minidom
 
-from commonroad.scenario.trajectory import State, Trajectory
+from commonroad.scenario.trajectory import Trajectory
 from commonroad.common.solution import VehicleType
 from commonroad_dc.feasibility.vehicle_dynamics import VehicleDynamics
 import commonroad_dc.feasibility.feasibility_checker as feasibility_checker
+from commonroad.scenario.state import KSState, InputState
 
 from vehiclemodels.parameters_vehicle1 import parameters_vehicle1
 from vehiclemodels.parameters_vehicle2 import parameters_vehicle2
@@ -118,7 +120,11 @@ class MotionPrimitiveGenerator:
         num_possible_combinations = num_possible_states ** 2
         print("Total possible combinations of states: ", num_possible_combinations)
 
+        # initialize counter
         count_accepted = 0
+
+        # rear axis distance for shifting positions from reference point to vehicle center
+        rear_ax_dist = cls.parameter.param_vehicle.b
 
         # for saving results
         list_motion_primitives = []
@@ -139,11 +145,16 @@ class MotionPrimitiveGenerator:
                 if not is_valid_combination:
                     continue
 
-                # add initial state to the list of forward simulated states
-                list_states_simulated = [State(position=np.array([0.0, 0.0]), velocity=v_start, steering_angle=sa_start,
-                                               orientation=0.0, time_step=0)]
+                # add initial state to the list of forward simulated states (reference point: rear axis)
+                initial_state = KSState(position=np.array([0.0, 0.0]), velocity=v_start, steering_angle=sa_start,
+                                        orientation=0.0, time_step=0)
 
-                input_state = State(acceleration=input_a, steering_angle_speed=input_sa_rate, time_step=0)
+                # shift to center point of vehicle and add to list of simulated states
+                list_states_simulated = [initial_state.translate_rotate(
+                        np.array([rear_ax_dist * np.cos(initial_state.orientation),
+                                  rear_ax_dist * np.sin(initial_state.orientation)]), 0)]
+
+                input_state = InputState(acceleration=input_a, steering_angle_speed=input_sa_rate, time_step=0)
 
                 for _ in range(num_step_sim):
                     state_simulated_next = cls.parameter.vehicle_dynamics.simulate_next_state(list_states_simulated[-1],
@@ -156,6 +167,7 @@ class MotionPrimitiveGenerator:
                     else:
                         list_states_simulated.append(state_simulated_next)
 
+                # generate simulated CR Trajectory (positions refer to center point of vehicle)
                 trajectory_simulated = Trajectory(initial_time_step=0, state_list=list_states_simulated)
 
                 with warnings.catch_warnings():
@@ -170,7 +182,19 @@ class MotionPrimitiveGenerator:
 
                 if is_feasible_trajectory:
                     count_accepted += 1
-                    list_motion_primitives.append(trajectory_simulated)
+                    #  shift positions back to reference point (rear axis) of motion primitives and add to the output
+                    #  list of motion primitives
+                    new_state_list = list()
+                    for state in trajectory_simulated.state_list:
+                        kwarg = {'position': state.position - np.array([rear_ax_dist * np.cos(state.orientation),
+                                                                        rear_ax_dist * np.sin(state.orientation)]),
+                                 'velocity': state.velocity,
+                                 'steering_angle': state.steering_angle,
+                                 'orientation': state.orientation,
+                                 'time_step': state.time_step}
+                        new_state_list.append(KSState(**kwarg))
+
+                    list_motion_primitives.append(Trajectory(initial_time_step=0, state_list=new_state_list))
 
             bar_progress.update(num_possible_states)
 
@@ -224,7 +248,7 @@ class MotionPrimitiveGenerator:
 
             for state in primitive.state_list:
                 # add mirrored state into list
-                state_mirrored = State(position=np.array([state.position[0], -state.position[1]]),
+                state_mirrored = KSState(position=np.array([state.position[0], -state.position[1]]),
                                        velocity=state.velocity,
                                        steering_angle=-state.steering_angle,
                                        orientation=-state.orientation,
@@ -349,8 +373,9 @@ class MotionPrimitiveGenerator:
                 plt.scatter(list_x, list_y)
 
                 # discard the first state of second trajectory onward to prevent duplication
-                traj_cur.state_list.pop(0)
-                list_states_final += traj_cur.state_list
+                traj_state_list = deepcopy(traj_cur.state_list)
+                traj_state_list.pop(0)
+                list_states_final += traj_state_list
 
             list_x = [state.position[0] for state in list_states_final]
             list_y = [state.position[1] for state in list_states_final]
@@ -359,8 +384,21 @@ class MotionPrimitiveGenerator:
             plt.axis('equal')
             plt.show()
 
-            trajectory_simulated = Trajectory(initial_time_step=0, state_list=list_states_final)
+            # create output trajectory from state list of motion primitives
+            rear_ax_dist = cls.parameter.param_vehicle.b
+            new_state_list = list()
+            for state in list_states_final:
+                kwarg = {'position': state.position + np.array([rear_ax_dist * np.cos(state.orientation),
+                                                                rear_ax_dist * np.sin(state.orientation)]),
+                         'velocity': state.velocity,
+                         'steering_angle': state.steering_angle,
+                         'orientation': state.orientation,
+                         'time_step': state.time_step}
+                new_state_list.append(KSState(**kwarg))
 
+            trajectory_simulated = Trajectory(initial_time_step=0, state_list=new_state_list)
+
+            # check feasibility of output trajectory
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
 

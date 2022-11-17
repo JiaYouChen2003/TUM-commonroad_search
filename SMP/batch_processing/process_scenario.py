@@ -7,19 +7,23 @@ from enum import Enum, unique
 from multiprocessing import Semaphore
 from multiprocessing.context import Process
 from typing import Tuple, List
+import numpy as np
 
 from commonroad.common.solution import PlanningProblemSolution, Solution, \
     CommonRoadSolutionWriter
 from commonroad.planning.planning_problem import PlanningProblemSet, PlanningProblem
 from commonroad.scenario.scenario import Scenario
-from commonroad.scenario.trajectory import State, Trajectory
+from commonroad.scenario.trajectory import Trajectory
+from commonroad.scenario.state import KSState
 from commonroad_dc.feasibility.solution_checker import valid_solution
+from commonroad_dc.feasibility.vehicle_dynamics import VehicleParameterMapping
 
 import SMP.batch_processing.helper_functions as hf
 from SMP.batch_processing.scenario_loader import ScenarioLoader, ScenarioConfig
 from SMP.maneuver_automaton.maneuver_automaton import ManeuverAutomaton
 from SMP.motion_planner.motion_planner import MotionPlanner, MotionPlannerType
 from SMP.motion_planner.plot_config import StudentScriptPlotConfig
+import SMP.batch_processing.timeout_config
 
 
 @unique
@@ -43,7 +47,7 @@ class SearchResult:
 
     def __init__(self, scenario_benchmark_id: str, result: ResultType, search_time_ms: float,
                  motion_planner_type: MotionPlannerType, error_msg: str = "",
-                 list_of_list_of_states: List[List[State]] = None):
+                 list_of_list_of_states: List[List[KSState]] = None):
         self.scenario_id = scenario_benchmark_id
         self.result = result
         self.search_time_ms = search_time_ms
@@ -56,23 +60,34 @@ class SearchResult:
         return self.search_time_ms / 1000
 
     @staticmethod
-    def compute_solution_trajectory(list_of_list_of_states) -> Trajectory:
+    def compute_solution_trajectory(list_of_list_of_states, rear_ax_dist) -> Trajectory:
         # add initial state - in the initial state it is quite important to only keep these 5 parameters, because a
         # trajectory can have only states with same attributes
         # the further states are coming from motion primitives so they have only these 5 attributes, so they can be
         # easily added to the list
+        # the positions of states need to be shifted from the rear axis to the center point of the vehicle to match
+        # the defined convention of the position in a CommonRoad Trajectory
         state = list_of_list_of_states[0][0]
-        kwarg = {'position': state.position,
+        kwarg = {'position': state.position + np.array([rear_ax_dist * np.cos(state.orientation),
+                                                        rear_ax_dist * np.sin(state.orientation)]),
                  'velocity': state.velocity,
                  'steering_angle': state.steering_angle,
                  'orientation': state.orientation,
                  'time_step': state.time_step}
-        list_states = [State(**kwarg)]
+        list_states = [KSState(**kwarg)]
 
         for state_list in list_of_list_of_states:
             # in the current version the first state of the list is the last state of the previous list, hence
             # duplicated, so we have to remove it
-            list_states.extend(state_list[1:])
+            state_list.pop(0)
+            for state in state_list:
+                kwarg = {'position': state.position + np.array([rear_ax_dist * np.cos(state.orientation),
+                                                                rear_ax_dist * np.sin(state.orientation)]),
+                         'velocity': state.velocity,
+                         'steering_angle': state.steering_angle,
+                         'orientation': state.orientation,
+                         'time_step': state.time_step}
+                list_states.append(KSState(**kwarg))
 
         return Trajectory(initial_time_step=list_states[0].time_step, state_list=list_states)
 
@@ -103,11 +118,17 @@ def solve_scenario(scenario, planning_problem, automaton, config: ScenarioConfig
                                               motion_planner_type=config.motion_planner_type)
         list_of_list_of_states, list_of_motion_primitives, _ = motion_planner.execute_search()
     except Exception as err:
-        # TODO consider giving -1 back because evaluating it out with excel then will be easier
-        search_time_ms = get_search_time_in_ms(time1)
-        error_msg = "".join(traceback.format_exception(type(err), err, err.__traceback__))
+        if str(err) == 'Time Out':
+            search_time_ms = get_search_time_in_ms(time1)
+            error_msg = "".join(traceback.format_exception(type(err), err, err.__traceback__))
 
-        result = ResultType.EXCEPTION
+            result = ResultType.TIMEOUT
+        # TODO consider giving -1 back because evaluating it out with excel then will be easier
+        else:
+            error_msg = "".join(traceback.format_exception(type(err), err, err.__traceback__))
+            result = ResultType.EXCEPTION
+        
+            search_time_ms = get_search_time_in_ms(time1)
     else:
         if list_of_list_of_states is None:
             search_time_ms = get_search_time_in_ms(time1)
@@ -124,7 +145,7 @@ def solve_scenario(scenario, planning_problem, automaton, config: ScenarioConfig
 
 def save_solution(scenario: Scenario, planning_problem_set: PlanningProblemSet, planning_problem_id: int,
                   config: ScenarioConfig,
-                  computation_time_in_sec: float, list_of_list_of_states: List[List[State]], output_path: str = './',
+                  computation_time_in_sec: float, list_of_list_of_states: List[List[KSState]], output_path: str = './',
                   overwrite: bool = False, validate_solution: bool = True, save_gif: bool = False,
                   output_path_gif: str = './gifs', logger: logging.Logger = logging.getLogger()) -> bool:
     """
@@ -144,12 +165,22 @@ def save_solution(scenario: Scenario, planning_problem_set: PlanningProblemSet, 
     :return: Return True if validate_solution set to False, otherwise respectively
     """
 
+    vehicle_params = VehicleParameterMapping[config.vehicle_type.name].value
+
     # create solution object for benchmark
     pps = PlanningProblemSolution(planning_problem_id=planning_problem_id,
                                   vehicle_type=config.vehicle_type,
                                   vehicle_model=config.vehicle_model,
                                   cost_function=config.cost_function,
-                                  trajectory=SearchResult.compute_solution_trajectory(list_of_list_of_states))
+                                  trajectory=SearchResult.compute_solution_trajectory(list_of_list_of_states,
+                                                                                      vehicle_params.b))
+
+# The commentted line below uses a static methode of class to compute 
+# the solution trajectory, which is shorter than the trajectory generated 
+# by method create_trajectory_from_list_states() in SMP.motion_planner.utility
+
+                                #   trajectory=SearchResult.compute_solution_trajectory(list_of_list_of_states,
+                                #                                                       vehicle_params.b))
 
     solution = Solution(scenario.scenario_id, [pps], computation_time=computation_time_in_sec)
 
@@ -189,8 +220,9 @@ def append_element_2_list_in_dict(the_dict, key, new_element, immutable_dictiona
 
 
 def process_scenario(scenario_id, scenario_loader: ScenarioLoader, configuration_dict, def_automaton: ManeuverAutomaton,
-                     result_dict, semaphore: Semaphore = None, logger: logging.Logger = logging.getLogger(),
-                     verbose=False):
+                     result_dict, semaphore: Semaphore = None, logger: logging.Logger = logging.getLogger()
+                     ):
+    verbose = hf.str2bool(configuration_dict["setting"]["verbose"])
     # noinspection PyBroadException
     try:
         logger.debug("Start processing [{:<30}]".format(scenario_id))
@@ -309,6 +341,8 @@ def debug_scenario(scenario_id, scenario_loader: ScenarioLoader, configuration_d
 
         # Parse configuration dict
         scenario_config = ScenarioConfig(scenario_id, configuration_dict)
+        
+        SMP.batch_processing.timeout_config.timeout = scenario_config.timeout
 
         # AUTOMATON preparation
         if def_automaton.type_vehicle != scenario_config.vehicle_type:

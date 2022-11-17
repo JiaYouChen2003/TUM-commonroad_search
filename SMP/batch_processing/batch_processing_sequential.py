@@ -2,9 +2,12 @@ import warnings
 
 import SMP.batch_processing.helper_functions as hf
 from SMP.batch_processing.process_scenario import debug_scenario
-
+import SMP.batch_processing.timeout_config
 
 def run_sequential_processing():
+    
+    SMP.batch_processing.timeout_config.use_sequential_processing = True
+    
     warnings.filterwarnings("ignore")
 
     configuration, logger, scenario_loader, def_automaton, result_dict = hf.init_processing(

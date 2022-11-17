@@ -18,11 +18,12 @@ from commonroad.prediction.prediction import TrajectoryPrediction
 from commonroad.scenario.lanelet import Lanelet
 from commonroad.scenario.obstacle import Obstacle
 from commonroad.scenario.scenario import Scenario
-from commonroad.scenario.trajectory import State
+from commonroad.scenario.state import InitialState, KSState
 from commonroad.scenario.trajectory import Trajectory
 from commonroad_dc.boundary import boundary
 from commonroad_dc.collision.collision_detection.pycrcc_collision_dispatch import create_collision_checker, \
     create_collision_object
+from commonroad_dc.feasibility.vehicle_dynamics import VehicleParameterMapping
 
 from SMP.maneuver_automaton.maneuver_automaton import ManeuverAutomaton
 from SMP.maneuver_automaton.motion_primitive import MotionPrimitive
@@ -48,10 +49,13 @@ class SearchBaseClass(ABC):
         self.automaton: ManeuverAutomaton = automaton
         self.shape_ego: Rectangle = automaton.shape_ego
 
+        vehicle_params = VehicleParameterMapping[self.automaton.type_vehicle.name].value
+        self.rear_ax_dist = vehicle_params.b
+
         # create necessary attributes
         self.lanelet_network = self.scenario.lanelet_network
         self.list_obstacles = self.scenario.obstacles
-        self.state_initial: State = self.planningProblem.initial_state
+        self.state_initial: InitialState = self.planningProblem.initial_state
         self.motion_primitive_initial = automaton.create_initial_motion_primitive(planningProblem)
         self.list_ids_lanelets_initial = []
         self.list_ids_lanelets_goal = []
@@ -67,10 +71,22 @@ class SearchBaseClass(ABC):
         self.path_fig = None
 
         # remove unnecessary attributes of the initial state
-        if hasattr(self.state_initial, 'yaw_rate'):
+        """
+        even though the attribute will be deleted in the first run,
+        hasattr still return True (the absence of the attribute is 
+        equivalent its value being None ). 
+        In short, after attribute is deleted, it will possess value
+        None, but hasattr will still return True.
+        More please refer to:
+        https://hynek.me/articles/hasattr/
+        """
+        # if hasattr(self.state_initial, 'yaw_rate'):
+        if getattr(self.state_initial,"yaw_rate") != None:
+            # delattr(self.state_initial, 'yaw_rate')
             del self.state_initial.yaw_rate
 
-        if hasattr(self.state_initial, 'slip_angle'):
+        # if hasattr(self.state_initial, 'slip_angle'):
+        if getattr(self.state_initial,"slip_angle") != None:
             del self.state_initial.slip_angle
 
         # parse planning problem
@@ -167,7 +183,7 @@ class SearchBaseClass(ABC):
                 self.calc_lanelet_cost(lanelet_goal, 1, list_lanelets_visited)
 
     @abstractmethod
-    def execute_search(self) -> Tuple[Union[None, List[List[State]]], Union[None, List[MotionPrimitive]], Any]:
+    def execute_search(self) -> Tuple[Union[None, List[List[KSState]]], Union[None, List[MotionPrimitive]], Any]:
         """
         The actual search algorithms are implemented in the children classes.
         """
@@ -286,7 +302,7 @@ class SearchBaseClass(ABC):
         return min(dist1, dist2)
 
     @staticmethod
-    def calc_travelled_distance(path: List[State]) -> float:
+    def calc_travelled_distance(path: List[KSState]) -> float:
         """
         Returns the travelled distance of the given path.
 
@@ -686,7 +702,7 @@ class SearchBaseClass(ABC):
         laneletObj = self.scenario.lanelet_network.find_lanelet_by_id(lanelet_id)
         return SearchBaseClass.calc_angle_of_position(laneletObj.center_vertices, pos)
 
-    def calc_angle_to_goal(self, state: State) -> float:
+    def calc_angle_to_goal(self, state: KSState) -> float:
         """
         Returns the orientation of the goal (angle in radian, counter-clockwise defined) with respect to the position
         of the state.
@@ -702,7 +718,7 @@ class SearchBaseClass(ABC):
         else:
             return 0
 
-    def lanelets_of_position(self, lanelets: List[int], state: State, diff: float = math.pi / 5) -> List[int]:
+    def lanelets_of_position(self, lanelets: List[int], state: KSState, diff: float = math.pi / 5) -> List[int]:
         """
         Returns all lanelets, whose angle to the orientation of the input state are smaller than pi/5.
 
@@ -824,7 +840,7 @@ class SearchBaseClass(ABC):
         return reachable
 
     @staticmethod
-    def calc_time_cost(path: List[State]) -> int:
+    def calc_time_cost(path: List[KSState]) -> int:
         """
         Returns time cost (number of time steps) to perform the given path.
 
@@ -832,7 +848,7 @@ class SearchBaseClass(ABC):
         """
         return path[-1].time_step - path[0].time_step
 
-    def calc_path_efficiency(self, path: List[State]) -> float:
+    def calc_path_efficiency(self, path: List[KSState]) -> float:
         """
         Returns the path efficiency = travelled_distance / time_cost
 
@@ -844,7 +860,7 @@ class SearchBaseClass(ABC):
         else:
             return SearchBaseClass.calc_travelled_distance(path) / cost_time
 
-    def calc_heuristic_distance(self, state: State, distance_type=0) -> float:
+    def calc_heuristic_distance(self, state: KSState, distance_type=0) -> float:
         """
         Returns the heuristic distance between the current state and the goal state.
 
@@ -860,7 +876,7 @@ class SearchBaseClass(ABC):
         else:
             return 0
 
-    def calc_heuristic_lanelet(self, path: List[State]) -> Union[Tuple[None, None, None], Tuple[float, list, list]]:
+    def calc_heuristic_lanelet(self, path: List[KSState]) -> Union[Tuple[None, None, None], Tuple[float, list, list]]:
         """
         Calculates the distance between every individual state of the path and the centers of the path's corresponding
         lanelets and sum them up.
@@ -932,7 +948,7 @@ class SearchBaseClass(ABC):
 
         return np.sqrt(delta_x ** 2 + delta_y ** 2)
 
-    def reached_goal(self, path: List[State]) -> bool:
+    def reached_goal(self, path: List[KSState]) -> bool:
         """
         Goal-test every state of the path and returns true if one of the state satisfies all conditions for the goal
         region: position, orientation, velocity, time.
@@ -945,7 +961,7 @@ class SearchBaseClass(ABC):
                 return True
         return False
 
-    def remove_states_behind_goal(self, path: List[List[State]]) -> List[List[State]]:
+    def remove_states_behind_goal(self, path: List[List[KSState]]) -> List[List[KSState]]:
         """
         Removes all states that are behind the state which satisfies goal state conditions and returns the pruned path.
 
@@ -959,13 +975,24 @@ class SearchBaseClass(ABC):
                 return path
         return path
 
-    def is_collision_free(self, path: List[State]) -> bool:
+    def is_collision_free(self, path: List[KSState]) -> bool:
         """
         Checks if path collides with an obstacle. Returns true for no collision and false otherwise.
 
         :param path: The path you want to check
         """
-        trajectory = Trajectory(path[0].time_step, path)
+        # positions of states in input path have to be shifted to the center of the vehicle, since the positions
+        # refer to the rear axis (reference point) when using motion primitives for the KS model
+        # the collision checker requires the center point position to create the collision object
+
+        new_state_list = list()
+
+        for state in path:
+            new_state = state.translate_rotate(np.array([self.rear_ax_dist * math.cos(state.orientation),
+                                                         self.rear_ax_dist * math.sin(state.orientation)]), 0)
+            new_state_list.append(new_state)
+
+        trajectory = Trajectory(path[0].time_step, new_state_list)
 
         # create a TrajectoryPrediction object consisting of the trajectory and the shape of the ego vehicle
         traj_pred = TrajectoryPrediction(trajectory=trajectory, shape=self.shape_ego)
@@ -980,7 +1007,7 @@ class SearchBaseClass(ABC):
         return True
 
     @staticmethod
-    def translate_primitive_to_current_state(primitive: MotionPrimitive, path_current: List[State]) -> List[State]:
+    def translate_primitive_to_current_state(primitive: MotionPrimitive, path_current: List[KSState]) -> List[KSState]:
         """
         Uses the trajectory defined in the given primitive, translates it towards the last state of current path and
         returns the list of new path.
@@ -994,7 +1021,7 @@ class SearchBaseClass(ABC):
         return primitive.attach_trajectory_to_state(path_current[-1])
 
     @staticmethod
-    def append_path(path_current: List[State], newPath: List[State]) -> List[State]:
+    def append_path(path_current: List[KSState], newPath: List[KSState]) -> List[KSState]:
         """
         Appends a new path to the current path and returns the whole path.
 

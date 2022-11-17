@@ -19,7 +19,9 @@ from commonroad.planning.planning_problem import PlanningProblem, PlanningProble
 from commonroad.prediction.prediction import TrajectoryPrediction
 from commonroad.scenario.obstacle import ObstacleType, DynamicObstacle
 from commonroad.scenario.scenario import Scenario
-from commonroad.scenario.trajectory import State, Trajectory
+from commonroad.scenario.trajectory import Trajectory
+from commonroad.scenario.state import KSState, InitialState
+from commonroad.visualization.draw_params import DynamicObstacleParams
 # import CommonRoad-io modules
 from commonroad.visualization.mp_renderer import MPRenderer
 from ipywidgets import widgets
@@ -64,9 +66,8 @@ def plot_search_scenario(scenario, initial_state, ego_shape, planning_problem, c
     plt.figure(figsize=(22.5, 4.5))
     plt.axis('equal')
     renderer = MPRenderer(plot_limits=[55, 100, -2.5, 5.5])
-    draw_params = {'scenario': {'lanelet': {'facecolor': '#F8F8F8'}}}
-    scenario.draw(renderer, draw_params=draw_params)
-
+    renderer.draw_params.lanelet_network.lanelet.facecolor = '#F8F8F8'
+    scenario.draw(renderer)
     ego_vehicle = DynamicObstacle(obstacle_id=scenario.generate_object_id(), obstacle_type=ObstacleType.CAR,
                                   obstacle_shape=ego_shape,
                                   initial_state=initial_state)
@@ -95,7 +96,7 @@ def initial_visualization(scenario, initial_state, ego_shape, planning_problem, 
             plt.show(block=False)
 
 
-def plot_state(state: State, color='red'):
+def plot_state(state: KSState, color='red'):
     plt.plot(state.position[0], state.position[1], color=color, marker='o', markersize=6)
 
 
@@ -116,7 +117,7 @@ def plot_motion_primitive(mp: MotionPrimitive, color='red'):
     plt.plot(x, y, color=color, marker="")
 
 
-def plot_primitive_path(mp: List[State], status: MotionPrimitiveStatus, plotting_params):
+def plot_primitive_path(mp: List[KSState], status: MotionPrimitiveStatus, plotting_params):
     plt.plot(mp[-1].position[0], mp[-1].position[1], color=plotting_params[status.value][0], marker='o', markersize=8,
              zorder=27)
     x = []
@@ -128,11 +129,14 @@ def plot_primitive_path(mp: List[State], status: MotionPrimitiveStatus, plotting
              linewidth=plotting_params[status.value][2], zorder=25)
 
 
-def update_visualization(primitive: List[State], status: MotionPrimitiveStatus, dict_node_status: Dict[int, Tuple],
+def update_visualization(primitive: List[KSState], status: MotionPrimitiveStatus, dict_node_status: Dict[int, Tuple],
                          path_fig, config, count, time_pause=0.4):
     assert isinstance(status, MotionPrimitiveStatus), "Status is not of type MotionPrimitiveStatus."
-
+    # print("primitive")
+    # print(primitive)
     dict_node_status.update({hash(primitive[-1]): (primitive, status)})
+    # print("test")
+    # print(dict_node_status)
     # only plot if run with python script
     if not config.JUPYTER_NOTEBOOK and config.DO_PLOT:
         plot_primitive_path(mp=primitive, status=status, plotting_params=config.PLOTTING_PARAMS)
@@ -150,7 +154,7 @@ def update_visualization(primitive: List[State], status: MotionPrimitiveStatus, 
     return dict_node_status
 
 
-def show_scenario(scenario_data: Tuple[Scenario, State, Rectangle, PlanningProblem], node_status: Dict[int, Tuple],
+def show_scenario(scenario_data: Tuple[Scenario, InitialState, Rectangle, PlanningProblem], node_status: Dict[int, Tuple],
                   config):
     plot_search_scenario(scenario=scenario_data[0], initial_state=scenario_data[1], ego_shape=scenario_data[2],
                          planning_problem=scenario_data[3], config=config)
@@ -167,6 +171,7 @@ def display_steps(scenario_data, config, algorithm, **args):
             show_scenario(scenario_data, node_status=list_states_nodes[iteration], config=config)
 
         except:
+            # better add some error/print some information
             pass
 
     def visualize_callback(Visualize):
@@ -217,18 +222,21 @@ def plot_primitives(list_primitives, figsize=(12, 3)):
     plt.show()
 
 
-def create_trajectory_from_list_states(list_paths_primitives: List[List[State]]) -> Trajectory:
+def create_trajectory_from_list_states(list_paths_primitives: List[List[KSState]], rear_ax_dist) -> Trajectory:
     # turns the solution (list of lists of states) into a CommonRoad Trajectory
+    # positions of the states have to be shifted to the vehicle center since the Motion Primitives positions refer
+    # to the reference point (rear axis) of the KS Model
     list_states = list()
 
     for path_primitive in list_paths_primitives:
         for state in path_primitive:
-            kwarg = {'position': state.position,
+            kwarg = {'position': state.position + np.array([rear_ax_dist * np.cos(state.orientation),
+                                                            rear_ax_dist * np.sin(state.orientation)]),
                      'velocity': state.velocity,
                      'steering_angle': state.steering_angle,
                      'orientation': state.orientation,
                      'time_step': state.time_step}
-            list_states.append(State(**kwarg))
+            list_states.append(KSState(**kwarg))
 
     # remove duplicates. the primitive have 6 states, thus a duplicate appears every 6 states
     list_states = [list_states[i] for i in range(len(list_states)) if i % 6 != 1]
@@ -249,29 +257,32 @@ def visualize_solution(scenario: Scenario, planning_problem_set: PlanningProblem
     # generate the dynamic obstacle according to the specification
     dynamic_obstacle_id = scenario.generate_object_id()
     dynamic_obstacle_type = ObstacleType.CAR
-    dynamic_obstacle = DynamicObstacle(dynamic_obstacle_id,
+    ego_vehicle = DynamicObstacle(dynamic_obstacle_id,
                                        dynamic_obstacle_type,
                                        dynamic_obstacle_shape,
                                        dynamic_obstacle_initial_state,
                                        dynamic_obstacle_prediction)
 
     # visualize scenario
+    ego_params = DynamicObstacleParams()
+    ego_params.vehicle_shape.occupancy.shape.facecolor = "green"
+
     for i in range(0, num_time_steps):
         display.clear_output(wait=True)
-        plt.figure(figsize=(10, 10))
+        plt.figure(figsize=(25, 10))
         renderer = MPRenderer()
-        scenario.draw(renderer, draw_params={'time_begin': i})
-        planning_problem_set.draw(renderer)
-        dynamic_obstacle.draw(renderer, draw_params={'time_begin': i,
-                                                     'dynamic_obstacle': {'shape': {'facecolor': 'green'},
-                                                                          'trajectory': {'draw_trajectory': True,
-                                                                                         'facecolor': '#ff00ff',
-                                                                                         'draw_continuous': True,
-                                                                                         'z_order': 60,
-                                                                                         'line_width': 5}
-                                                                          }
-                                                     })
+        renderer.draw_params.time_begin = i
+        scenario.draw(renderer)
 
+        ego_params.time_begin = i
+        ego_params.trajectory.draw_trajectory = True
+        ego_params.trajectory.facecolor = '#ff00ff'
+        ego_params.trajectory.draw_continuous = True
+        ego_params.trajectory.zorder = 60
+        ego_params.trajectory.line_width = 1
+
+        ego_vehicle.draw(renderer, draw_params=ego_params)
+        planning_problem_set.draw(renderer)
         plt.gca().set_aspect('equal')
         renderer.render()
         plt.show()

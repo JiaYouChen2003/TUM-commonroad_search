@@ -4,7 +4,8 @@ from typing import List
 
 import numpy as np
 from commonroad.common.solution import VehicleModel, VehicleType
-from commonroad.scenario.trajectory import Trajectory, State
+from commonroad.scenario.trajectory import Trajectory
+from commonroad.scenario.state import KSState
 
 
 class MotionPrimitive:
@@ -104,7 +105,7 @@ class MotionPrimitive:
                  'steering_angle': self.state_initial.steering_angle,
                  'orientation': self.state_initial.orientation,
                  'time_step': self.state_initial.time_step}
-        state_initial = State(**kwarg)
+        state_initial = KSState(**kwarg)
 
         # add final state into the trajectory
         kwarg = {'position': np.array([self.state_final.x, self.state_final.y]),
@@ -112,7 +113,7 @@ class MotionPrimitive:
                  'steering_angle': self.state_final.steering_angle,
                  'orientation': self.state_final.orientation,
                  'time_step': self.state_final.time_step}
-        state_final = State(**kwarg)
+        state_final = KSState(**kwarg)
 
         print(state_initial)
         for state in self.trajectory.state_list:
@@ -142,30 +143,31 @@ class MotionPrimitive:
         return abs(self.state_final.velocity - other.state_initial.velocity) < 0.01 and abs(
             self.state_final.steering_angle - other.state_initial.steering_angle) < 0.01
 
-    def attach_trajectory_to_state(self, state: State) -> List[State]:
+    def attach_trajectory_to_state(self, state: KSState) -> List[KSState]:
         """
         Attaches the trajectory to the given state, and returns the new list of states.
 
-        :param state: the state to which the trajectory will be attached
+        :param state: the given state to which the trajectory will be attached
         """
+        # rotate states of motion primitive by the orientation of the given state
+        rotated_state_list = [orig_state.translate_rotate(np.zeros(2), state.orientation)
+                              for orig_state in self.trajectory.state_list]
 
-        # deep copy to prevent manipulation of original data
-        trajectory = deepcopy(self.trajectory)
+        # translate states by the position of the given state
+        translated_state_list = [rotated_state.translate_rotate(state.position, 0)
+                                 for rotated_state in rotated_state_list]
 
-        # rotate the trajectory by the orientation of the given state
-        trajectory.translate_rotate(np.zeros(2), state.orientation)
-        # translate the trajectory by the position of the given state
-        trajectory.translate_rotate(state.position, 0)
+        # as the initial state of the trajectory/motion primitive is exactly the given state,
+        # we thus pop out the first state of the state list
+        translated_state_list.pop(0)
 
-        # as the initial state of the trajectory is exactly the given state, we thus pop out the initial state
-        trajectory.state_list.pop(0)
-
-        # we modify the time steps of the trajectory
+        # we modify the time steps of the motion primitive (i.e., we shift the time steps by the time step of the given
+        # state)
         time_step_state = int(state.time_step)
-        for state in trajectory.state_list:
+        for state in translated_state_list:
             state.time_step += time_step_state
 
-        return trajectory.state_list
+        return translated_state_list
 
 
 class MotionPrimitiveParser:
@@ -274,6 +276,6 @@ class MotionPrimitiveParser:
                      'time_step': list_time_steps[i]}
 
             # append states
-            list_states_trajectory.append(State(**kwarg))
+            list_states_trajectory.append(KSState(**kwarg))
 
         return Trajectory(initial_time_step=int(list_time_steps[0]), state_list=list_states_trajectory)

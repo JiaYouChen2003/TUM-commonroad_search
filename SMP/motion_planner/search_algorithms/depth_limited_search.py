@@ -1,7 +1,8 @@
 import copy
+import time
 from typing import Dict, Tuple, List, Any, Union
 
-from commonroad.scenario.trajectory import State
+from commonroad.scenario.state import KSState
 
 from SMP.maneuver_automaton.motion_primitive import MotionPrimitive
 from SMP.motion_planner.node import Node
@@ -9,6 +10,7 @@ from SMP.motion_planner.plot_config import DefaultPlotConfig
 from SMP.motion_planner.utility import initial_visualization, update_visualization, MotionPrimitiveStatus
 from SMP.motion_planner.search_algorithms.base_class import SearchBaseClass
 
+import SMP.batch_processing.timeout_config
 
 class DepthLimitedSearch(SearchBaseClass):
     """
@@ -18,13 +20,14 @@ class DepthLimitedSearch(SearchBaseClass):
     def __init__(self, scenario, planningProblem, automaton, plot_config=DefaultPlotConfig):
         super().__init__(scenario=scenario, planningProblem=planningProblem, automaton=automaton,
                          plot_config=plot_config)
-
+        self.start_time = None
         if plot_config.SAVE_FIG:
             self.path_fig = '../figures/dls/'
         else:
             self.path_fig = None
-
-    def execute_search(self, limit_depth=7) -> Tuple[Union[None, List[List[State]]], Union[None, List[MotionPrimitive]], Any]:
+    
+   
+    def execute_search(self, limit_depth=7) -> Tuple[Union[None, List[List[KSState]]], Union[None, List[MotionPrimitive]], Any]:
         """
         Depth-Limited Search code_tree_search
         """
@@ -44,7 +47,8 @@ class DepthLimitedSearch(SearchBaseClass):
                                                  config=self.config_plot,
                                                  count=len(list_status_nodes))
         list_status_nodes.append(copy.copy(dict_status_nodes))
-
+        if SMP.batch_processing.timeout_config.use_sequential_processing:
+            self.start_time = time.perf_counter()
         result = self.recursive_dls(list_status_nodes, dict_status_nodes, node_initial, limit_depth)
 
         if result is None:
@@ -67,6 +71,10 @@ class DepthLimitedSearch(SearchBaseClass):
         @param limit: current Limit
         @return:
         """
+        if SMP.batch_processing.timeout_config.use_sequential_processing:
+            current_time = time.perf_counter()
+            if (current_time - self.start_time) >= SMP.batch_processing.timeout_config.timeout:
+                raise Exception('Time Out')
         dict_status_nodes = update_visualization(primitive=node_current.list_paths[-1],
                                                  status=MotionPrimitiveStatus.CURRENTLY_EXPLORED,
                                                  dict_node_status=dict_status_nodes, path_fig=self.path_fig,

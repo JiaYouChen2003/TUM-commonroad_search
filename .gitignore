@@ -10,7 +10,7 @@ __pycache__
 *.egg-info
 
 
-
-
+outputs/gifs/
+outputs/solutions/
 
 *.log
