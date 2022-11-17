@@ -6,6 +6,14 @@ RUN echo "conda activate commonroad-py37" > ~/.bashrc
 # # link python3 to python3.7
 # RUN rm /usr/bin/python3 && ln -sf python3.7 /usr/bin/python3
 # install packages
+RUN apt-get update && apt-get install \
+    imagemagick -y \
+    python3-dev -y \
+    make \
+    build-essential \
+    m4 \
+    socat \
+    tk-dev -y
 
 RUN bash -ic 'pip install jupyter tqdm imageio pyyaml ipywidgets networkx'
 
