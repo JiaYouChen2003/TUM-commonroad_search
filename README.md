@@ -12,8 +12,8 @@ The code is written in Python 3.7 and has been tested on Ubuntu 18.04. As the fi
 $ git clone https://gitlab.lrz.de/tum-cps/commonroad-search.git
 ```
 
-## Table of Contents
-* [Ways to run](#ways-to-run)
+## :bookmark_tabs: Table of Contents
+* [Ways to run](#arrow_forward-ways-to-run)
     * [Local installation](#computer-local-installation)
     * [Virtual machine (VM)](#cloud-virtual-machine)
     * [Docker](#whale-docker)
@@ -21,7 +21,7 @@ $ git clone https://gitlab.lrz.de/tum-cps/commonroad-search.git
 * [Useful Tools](#wrench-useful-tools)
 * [Questions & Answers](#grey_question-questions-and-answers)
 
-## Ways to run
+## :arrow_forward: Ways to run
 
 We provide 3 ways to run the software framework: **local installation**, **virtual machine (VM)**, or a **docker container**. Please refer to the table below for the supported platforms:
 
@@ -39,9 +39,11 @@ has not been tested. We therefore don't recommend a local installation on Window
 
 ## :computer: Local installation
 
-**skip this section if you intend to run the code in the virtual machine or in the docker container.**
+_(skip this section if you intend to run the code in the virtual machine or in the docker container.)_
 
 We recommend using [Anaconda](https://www.anaconda.com/) to manage your environment. A guide for managing python environments with Anaconda can be found [here](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
+
+**Note for MacOS M1 Users: We recommend to use the 64-bit Anaconda Installer (graphical or command-line) instead of the Anaconda (M1) installer**
 
 After installing Anaconda, create a new environment with:
 ``` sh
