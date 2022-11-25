@@ -118,13 +118,15 @@ def plot_motion_primitive(mp: MotionPrimitive, color='red'):
 
 
 def plot_primitive_path(mp: List[KSState], status: MotionPrimitiveStatus, plotting_params):
-    plt.plot(mp[-1].position[0], mp[-1].position[1], color=plotting_params[status.value][0], marker='o', markersize=8,
-             zorder=27)
+    plt.plot(mp[-1].position[0] + 1.42 * np.cos(mp[-1].orientation),
+             mp[-1].position[1] + 1.42 * np.sin(mp[-1].orientation),
+             color=plotting_params[status.value][0],
+             marker='o',  markersize=8, zorder=27)
     x = []
     y = []
     for state in mp:
-        x.append(state.position[0])
-        y.append(state.position[1])
+        x.append(state.position[0] + 1.42 * np.cos(state.orientation))
+        y.append(state.position[1] + 1.42 * np.sin(state.orientation))
     plt.plot(x, y, color=plotting_params[status.value][0], marker="", linestyle=plotting_params[status.value][1],
              linewidth=plotting_params[status.value][2], zorder=25)
 

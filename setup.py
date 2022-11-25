@@ -22,7 +22,7 @@ setuptools.setup(
     # Requirements
     python_requires='>3.7',
     install_requires=['commonroad-io>=2022.3',
-                      'commonroad-drivability-checker>=2022.2',
+                      'commonroad-drivability-checker>=2022.2.1',
                       'commonroad-route-planner>=2022.3',
                       'tqdm~=4.64',
                       'networkx>=2.4',

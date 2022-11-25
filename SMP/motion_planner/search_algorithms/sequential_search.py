@@ -2,6 +2,7 @@ import copy
 import time
 from abc import ABC
 from typing import Tuple, Union, Dict, List, Any
+import numpy as np
 
 from commonroad.scenario.state import KSState
 
@@ -37,8 +38,14 @@ class SequentialSearch(SearchBaseClass, ABC):
         list_status_nodes = []
         dict_node_status: Dict[int, Tuple] = {}
 
+        # shift initial state of planning problem from vehicle center to rear axle position
+        # (reference point of motion primitives)
+        new_state_initial = self.state_initial.translate_rotate(
+            -np.array([self.rear_ax_dist * np.cos(self.state_initial.orientation),
+                       self.rear_ax_dist * np.sin(self.state_initial.orientation)]), 0)
+
         # first node
-        node_initial = Node(list_paths=[[self.state_initial]],
+        node_initial = Node(list_paths=[[new_state_initial]],
                             list_primitives=[self.motion_primitive_initial],
                             depth_tree=0)
         initial_visualization(self.scenario, self.state_initial, self.shape_ego, self.planningProblem,

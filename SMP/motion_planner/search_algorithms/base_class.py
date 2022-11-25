@@ -930,21 +930,28 @@ class SearchBaseClass(ABC):
 
     def calc_euclidean_distance(self, current_node: PriorityNode) -> float:
         """
-        Calculates the euclidean distance to the desired goal position.
+        Calculates the euclidean distance of the vehicle center to the desired goal position. The attribute
+        self.position_desired is extracted from the planning problem (see method self.parse_planning_problem() )
 
         @param current_node:
-        @return:
+        @return: euclidean distance
         """
-        if self.position_desired[0].contains(current_node.list_paths[-1][-1].position[0]):
+        current_node_state = current_node.list_paths[-1][-1]    # get last state in current path
+        pos = current_node_state.position                       # get (rear axis) position of last state
+        # get positions of vehicle center (node state refers to reference point of Motion Primitives, i.e., rear axis)
+        pos_veh_center = pos + np.array([self.rear_ax_dist * np.cos(current_node_state.orientation),
+                                         self.rear_ax_dist * np.sin(current_node_state.orientation)])
+
+        if self.position_desired[0].contains(pos_veh_center[0]):
             delta_x = 0.0
         else:
-            delta_x = min([abs(self.position_desired[0].start - current_node.list_paths[-1][-1].position[0]),
-                           abs(self.position_desired[0].end - current_node.list_paths[-1][-1].position[0])])
-        if self.position_desired[1].contains(current_node.list_paths[-1][-1].position[1]):
+            delta_x = min([abs(self.position_desired[0].start - pos_veh_center[0]),
+                           abs(self.position_desired[0].end - pos_veh_center[0])])
+        if self.position_desired[1].contains(pos_veh_center[1]):
             delta_y = 0
         else:
-            delta_y = min([abs(self.position_desired[1].start - current_node.list_paths[-1][-1].position[1]),
-                           abs(self.position_desired[1].end - current_node.list_paths[-1][-1].position[1])])
+            delta_y = min([abs(self.position_desired[1].start - pos_veh_center[1]),
+                           abs(self.position_desired[1].end - pos_veh_center[1])])
 
         return np.sqrt(delta_x ** 2 + delta_y ** 2)
 
@@ -957,7 +964,16 @@ class SearchBaseClass(ABC):
 
         """
         for i in range(len(path)):
-            if self.planningProblem.goal.is_reached(path[i]):
+            # check if center of vehicle is within goal region
+            state = path[i]
+            kwarg = {'position': state.position + np.array([self.rear_ax_dist * np.cos(state.orientation),
+                                                            self.rear_ax_dist * np.sin(state.orientation)]),
+                     'velocity': state.velocity,
+                     'steering_angle': state.steering_angle,
+                     'orientation': state.orientation,
+                     'time_step': state.time_step}
+            state_shifted = KSState(**kwarg)
+            if self.planningProblem.goal.is_reached(state_shifted):
                 return True
         return False
 
@@ -969,7 +985,16 @@ class SearchBaseClass(ABC):
         """
 
         for i in range(len(path[-1])):
-            if self.planningProblem.goal.is_reached(path[-1][i]):
+            # check if center of vehicle is within goal region
+            state = path[-1][i]
+            kwarg = {'position': state.position + np.array([self.rear_ax_dist * np.cos(state.orientation),
+                                                            self.rear_ax_dist * np.sin(state.orientation)]),
+                     'velocity': state.velocity,
+                     'steering_angle': state.steering_angle,
+                     'orientation': state.orientation,
+                     'time_step': state.time_step}
+            state_shifted = KSState(**kwarg)
+            if self.planningProblem.goal.is_reached(state_shifted):
                 for j in range(i + 1, len(path[-1])):
                     path[-1].pop()
                 return path
