@@ -91,7 +91,7 @@ If you are using PyCharm, set **commonroad-py37** as environment in PyCharm as w
 
 ## :cloud: Virtual machine
 A [VirtualBox](https://www.virtualbox.org/) image is available in which all the necessary packages have been installed. 
-The virtual machine image can be downloaded via [this](https://syncandshare.lrz.de/getlink/fiSp5VWNaA17aePvZvNZZR/LUbuntu18.04_VirturalBox_2021AI%5B01.12.21%5D.zip) link. 
+The virtual machine image can be downloaded via [this](https://syncandshare.lrz.de/getlink/fiT5GTiqWNogNVWQ3Dya9w/) link. 
 The downloading and the default login passwords are both `commonroad`. 
 You can update to the latest commit with typing the command in the `commonroad-search/` folder:
 
