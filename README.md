@@ -6,7 +6,9 @@ This is a programming exercise of the lecture **Fundamentals of Artificial Intel
 |-----------------------------|---------------------------|
 |Breadth First Search <br /> Depth First Search <br /> Depth-limited Search <br />   Uniform Cost Search (Dijkstra)      |Greedy Best First Search <br />  A* Search                  |
 
-The code is written in Python 3.7 and has been tested on Ubuntu 18.04. As the first step, clone this repository with:
+The code is written in Python 3.7 and has been tested on Ubuntu 18.04. 
+
+#### Before you start with any of the steps mentioned below, first clone this repository via:
 
 ```sh
 $ git clone https://gitlab.lrz.de/tum-cps/commonroad-search.git
