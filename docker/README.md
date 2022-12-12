@@ -11,10 +11,18 @@ For other platforms, visit https://docs.docker.com/get-docker/.
 
 
 ### Run the docker container
-In the root folder of the CommonRoad Search repository:
+In the **root folder of the CommonRoad Search repository** run the following commands, depending on your platform:
+
+**On Linux/MacOS**:
 ```
 sudo docker run -it -p 9000:8888 --mount src="$(pwd)",target=/commonroad/commonroad-search,type=bind gitlab.lrz.de:5005/tum-cps/commonroad-search:2022_AI
 ```
+
+**On Windows**:
+```
+docker run -it -p 9000:8888 --mount src="%cd%",target=/commonroad/commonroad-search,type=bind gitlab.lrz.de:5005/tum-cps/commonroad-search:2022_AI
+```
+
 You can now access the Jupyter Notebook by opening `localhost:9000` in your browser.
 
 ## Option 2: Build the docker image locally
@@ -32,8 +40,16 @@ sudo docker build -t commonroad-search:2022_AI  - < commonroad_search_2022.docke
 ```
 
 ### Run the docker container
-In the root folder of the CommonRoad Search repository:
+In the **root folder of the CommonRoad Search repository** run the following commands, depending on your platform:
+
+**On Linux/MacOS**:
 ```
 sudo docker run -it -p 9000:8888 --mount src="$(pwd)",target=/commonroad/commonroad-search,type=bind commonroad-search:2022_AI
 ```
+
+**On Windows**:
+```
+docker run -it -p 9000:8888 --mount src="%cd%",target=/commonroad/commonroad-search,type=bind commonroad-search:2022_AI
+```
+
 You can now access the Jupyter Notebook by opening `localhost:9000` in your browser.
