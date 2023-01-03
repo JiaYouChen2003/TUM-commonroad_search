@@ -10,6 +10,6 @@ numpy~=1.21.6
 ipython~=7.18.1
 pyyaml~=5.3.1
 imageio~=2.9.0
-shapely>=1.6.4.post2
+shapely>=1.6.4.post2,<2.0.0
 setuptools>=42.0.1
 triangle>=20200424
