@@ -1,6 +1,8 @@
 import setuptools
+import os
 
-with open("README.md", "r") as fh:
+setup_dir = os.path.dirname(os.path.realpath(__file__))
+with open(f"{setup_dir}/README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
@@ -13,6 +15,8 @@ setuptools.setup(
     long_description=long_description,
     url="https://gitlab.lrz.de/tum-cps/commonroad-search",
     packages=setuptools.find_packages(),
+    include_package_data=True,
+    package_data = {"" : ["**.xml", "**.automaton"]},
     classifiers=[
         "Programming Language :: Python :: 3.7",
         "Operating System :: POSIX :: Linux",
