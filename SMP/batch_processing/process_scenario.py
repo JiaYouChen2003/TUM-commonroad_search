@@ -19,78 +19,12 @@ from commonroad_dc.feasibility.solution_checker import valid_solution
 from commonroad_dc.feasibility.vehicle_dynamics import VehicleParameterMapping
 
 import SMP.batch_processing.helper_functions as hf
+from SMP.batch_processing.helper_functions import ResultType, ResultText, SearchResult
 from SMP.batch_processing.scenario_loader import ScenarioLoader, ScenarioConfig
 from SMP.maneuver_automaton.maneuver_automaton import ManeuverAutomaton
 from SMP.motion_planner.motion_planner import MotionPlanner, MotionPlannerType
 from SMP.motion_planner.plot_config import StudentScriptPlotConfig
 import SMP.batch_processing.timeout_config
-
-
-@unique
-class ResultType(Enum):
-    SUCCESS = 'SUCCESS'
-    INVALID_SOLUTION = 'INVALID'
-    FAILURE = 'FAILURE'
-    EXCEPTION = 'EXCEPTION'
-    TIMEOUT = 'TIMEOUT'
-
-
-class ResultText:
-    SUCCESS = 'Solution found:'
-    INVALID_SOLUTION = 'Solution found but invalid:'
-    FAILURE = 'Solution not found:'
-    EXCEPTION = 'Exception occurred:'
-    TIMEOUT = 'Time out:'
-
-
-class SearchResult:
-
-    def __init__(self, scenario_benchmark_id: str, result: ResultType, search_time_ms: float,
-                 motion_planner_type: MotionPlannerType, error_msg: str = "",
-                 list_of_list_of_states: List[List[KSState]] = None):
-        self.scenario_id = scenario_benchmark_id
-        self.result = result
-        self.search_time_ms = search_time_ms
-        self.motion_planner_type = motion_planner_type
-        self.error_msg = error_msg
-        self.list_of_list_of_states = list_of_list_of_states
-
-    @property
-    def search_time_sec(self) -> float:
-        return self.search_time_ms / 1000
-
-    @staticmethod
-    def compute_solution_trajectory(list_of_list_of_states, rear_ax_dist) -> Trajectory:
-        # add initial state - in the initial state it is quite important to only keep these 5 parameters, because a
-        # trajectory can have only states with same attributes
-        # the further states are coming from motion primitives so they have only these 5 attributes, so they can be
-        # easily added to the list
-        # the positions of states need to be shifted from the rear axis to the center point of the vehicle to match
-        # the defined convention of the position in a CommonRoad Trajectory
-        state = list_of_list_of_states[0][0]
-        kwarg = {'position': state.position + np.array([rear_ax_dist * np.cos(state.orientation),
-                                                        rear_ax_dist * np.sin(state.orientation)]),
-                 'velocity': state.velocity,
-                 'steering_angle': state.steering_angle,
-                 'orientation': state.orientation,
-                 'time_step': state.time_step}
-        list_states = [KSState(**kwarg)]
-
-        for state_list in list_of_list_of_states:
-            # in the current version the first state of the list is the last state of the previous list, hence
-            # duplicated, so we have to remove it
-            state_list.pop(0)
-            for state in state_list:
-                kwarg = {'position': state.position + np.array([rear_ax_dist * np.cos(state.orientation),
-                                                                rear_ax_dist * np.sin(state.orientation)]),
-                         'velocity': state.velocity,
-                         'steering_angle': state.steering_angle,
-                         'orientation': state.orientation,
-                         'time_step': state.time_step}
-                list_states.append(KSState(**kwarg))
-
-        return Trajectory(initial_time_step=list_states[0].time_step, state_list=list_states)
-
 
 def get_planning_problem_and_id(planning_problem_set: PlanningProblemSet, planning_problem_idx) -> \
         Tuple[PlanningProblem, int]:
