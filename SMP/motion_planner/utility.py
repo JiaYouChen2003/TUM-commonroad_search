@@ -62,10 +62,10 @@ def plot_legend(plotting_config: Type[PlotConfig]):
     plt.rcParams["legend.shadow"] = True
 
 
-def plot_search_scenario(scenario, initial_state, ego_shape, planning_problem, config: Type[PlotConfig]):
-    plt.figure(figsize=(22.5, 4.5))
+def plot_search_scenario(scenario, initial_state, ego_shape, planning_problem, config: Type[PlotConfig], figsize=(22.5, 4.5)):
+    plt.figure(figsize=figsize)
     plt.axis('equal')
-    renderer = MPRenderer(plot_limits=[55, 100, -2.5, 5.5])
+    renderer = MPRenderer()
     renderer.draw_params.lanelet_network.lanelet.facecolor = '#F8F8F8'
     scenario.draw(renderer)
     ego_vehicle = DynamicObstacle(obstacle_id=scenario.generate_object_id(), obstacle_type=ObstacleType.CAR,
@@ -117,18 +117,25 @@ def plot_motion_primitive(mp: MotionPrimitive, color='red'):
     plt.plot(x, y, color=color, marker="")
 
 
-def plot_primitive_path(mp: List[KSState], status: MotionPrimitiveStatus, plotting_params):
-    plt.plot(mp[-1].position[0] + 1.42 * np.cos(mp[-1].orientation),
-             mp[-1].position[1] + 1.42 * np.sin(mp[-1].orientation),
+def plot_primitive_path(mp: List[KSState], status: MotionPrimitiveStatus, plotting_params) -> Tuple[float, float, float, float]:
+    x = mp[-1].position[0] + 1.42 * np.cos(mp[-1].orientation)
+    y = mp[-1].position[1] + 1.42 * np.sin(mp[-1].orientation)
+    plt.plot(x,
+             y,
              color=plotting_params[status.value][0],
              marker='o',  markersize=8, zorder=27)
-    x = []
-    y = []
+    all_x = []
+    all_y = []
     for state in mp:
-        x.append(state.position[0] + 1.42 * np.cos(state.orientation))
-        y.append(state.position[1] + 1.42 * np.sin(state.orientation))
-    plt.plot(x, y, color=plotting_params[status.value][0], marker="", linestyle=plotting_params[status.value][1],
+        all_x.append(state.position[0] + 1.42 * np.cos(state.orientation))
+        all_y.append(state.position[1] + 1.42 * np.sin(state.orientation))
+    plt.plot(all_x, all_y, color=plotting_params[status.value][0], marker="", linestyle=plotting_params[status.value][1],
              linewidth=plotting_params[status.value][2], zorder=25)
+
+    all_x.append(x)
+    all_y.append(y)
+
+    return min(all_x), min(all_y), max(all_x), max(all_y)
 
 
 def update_visualization(primitive: List[KSState], status: MotionPrimitiveStatus, dict_node_status: Dict[int, Tuple],
@@ -157,24 +164,34 @@ def update_visualization(primitive: List[KSState], status: MotionPrimitiveStatus
 
 
 def show_scenario(scenario_data: Tuple[Scenario, InitialState, Rectangle, PlanningProblem], node_status: Dict[int, Tuple],
-                  config):
+                  config, figsize, offset):
     plot_search_scenario(scenario=scenario_data[0], initial_state=scenario_data[1], ego_shape=scenario_data[2],
-                         planning_problem=scenario_data[3], config=config)
+                         planning_problem=scenario_data[3], config=config, figsize=figsize)
+    limits = []
     for node in node_status.values():
-        plot_primitive_path(node[0], node[1], config.PLOTTING_PARAMS)
+        new_limits = plot_primitive_path(node[0], node[1], config.PLOTTING_PARAMS)
+        limits.append(new_limits)
+
+    limits = np.array(limits)
+    limits_min = limits[:, :2]
+    limits_max = limits[:, 2:]
+    limits_min = np.min(limits_min, axis=0) - offset
+    limits_max = np.max(limits_max, axis=0) + offset
+
+    # Set plot limits
+    ax = plt.gca()
+    ax.set_xlim(limits_min[0], limits_max[0])
+    ax.set_ylim(limits_min[1], limits_max[1])
 
     plt.show()
 
 
-def display_steps(scenario_data, config, algorithm, **args):
+def display_steps(scenario_data, config, algorithm, figsize=(22.5, 4.5), offset=10., max_step=None, **args):
+
     def slider_callback(iteration):
         # don't show graph for the first time running the cell calling this function
-        try:
-            show_scenario(scenario_data, node_status=list_states_nodes[iteration], config=config)
-
-        except:
-            # better add some error/print some information
-            pass
+        if list_states_nodes is not None:
+            show_scenario(scenario_data, node_status=list_states_nodes[iteration], config=config, figsize=figsize, offset=offset)
 
     def visualize_callback(Visualize):
         if Visualize is True:
@@ -186,7 +203,10 @@ def display_steps(scenario_data, config, algorithm, **args):
             else:
                 path, primitives, list_states_nodes = algorithm()
 
-            slider.max = len(list_states_nodes) - 1
+            slider_max = len(list_states_nodes) - 1
+            if max_step is not None:
+                slider_max = min(slider_max, max_step)
+            slider.max = slider_max
 
             for i in range(slider.max + 1):
                 slider.value = i
