@@ -49,7 +49,7 @@ We recommend using [Anaconda](https://www.anaconda.com/) to manage your environm
 
 After installing Anaconda, create a new environment with:
 ``` sh
-$ conda create -n commonroad-py37 python=3.7 -y
+$ conda create -n commonroad-py39 python=3.9 -y
 ```
 
 Here the name of the environment is called **commonroad-py37**. You may also change this name as you wish. In such case, don't forget to change it in the following commands as well. **Always activate** this environment before you do anything related:
@@ -59,7 +59,7 @@ $ conda activate commonroad-py37
 ```
 Install `Jupyter Notebook` and supplementary modules:
 ```sh
-$ conda install jupyter ipykernel ipywidgets sphinx scipy -y
+$ pip install jupyter ipykernel ipywidgets sphinx scipy
 ```
 
 With older versions of `Jupyter` you might need to run the following commands:
@@ -93,7 +93,7 @@ If you are using PyCharm, set **commonroad-py37** as environment in PyCharm as w
 
 ## :cloud: Virtual machine
 A [VirtualBox](https://www.virtualbox.org/) image is available in which all the necessary packages have been installed. 
-The virtual machine image can be downloaded via [this](https://syncandshare.lrz.de/getlink/fiT5GTiqWNogNVWQ3Dya9w/) link. 
+The virtual machine image can be downloaded via [this](https://syncandshare.lrz.de/getlink/fi7SzQDYKZpN5AoUNLfkLd/) link.
 The downloading and the default login passwords are both `commonroad`. 
 You can update to the latest commit with typing the command in the `commonroad-search/` folder:
 
