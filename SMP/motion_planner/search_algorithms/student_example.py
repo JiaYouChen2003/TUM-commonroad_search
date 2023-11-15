@@ -45,16 +45,16 @@ class StudentMotionPlannerExample(GreedyBestFirstSearch):
         if self.dict_lanelets_costs[final_lanelet_id[0]] == -1:
             return np.inf
         factor = 1
-        if self.dict_lanelets_costs[final_lanelet_id[0]] > self.dict_lanelets_costs[start_lanelet_id[0]]:
-            return np.inf
-        if self.dict_lanelets_costs[final_lanelet_id[0]] < self.dict_lanelets_costs[start_lanelet_id[0]]:
-            factor = factor * 0.1
+        # if self.dict_lanelets_costs[final_lanelet_id[0]] > self.dict_lanelets_costs[start_lanelet_id[0]]:
+        #    return np.inf
+        #if self.dict_lanelets_costs[final_lanelet_id[0]] < self.dict_lanelets_costs[start_lanelet_id[0]]:
+        #    factor = factor * 0.1
 
         angleToGoal = self.calc_angle_to_goal(path_last[-1])
 
         orientationToGoalDiff = self.calc_orientation_diff(angleToGoal, path_last[-1].orientation)
-        if final_lanelet_id[0] in self.list_ids_lanelets_goal:
-            factor = factor * 0.07
+        # if final_lanelet_id[0] in self.list_ids_lanelets_goal:
+        #     factor = factor * 0.07
         pathLength = self.calc_travelled_distance(path_last)
         cost_time = self.calc_time_cost(path_last)
         weights = np.zeros(6)
