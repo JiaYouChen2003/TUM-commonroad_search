@@ -20,7 +20,7 @@ setting:
 
   # choose the number of parallel executions of motion planners
   # the valid range is [1, max number of cpus on your system]
-  num_worker_processes: 6
+  num_worker_processes: 12
 
 # logging
 logging:

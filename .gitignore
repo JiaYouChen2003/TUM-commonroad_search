@@ -19,3 +19,6 @@ outputs/gifs/
 outputs/solutions/
 
 *.log
+
+## Jupyter Notebook Trash
+.Trash-0
