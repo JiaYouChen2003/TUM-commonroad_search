@@ -17,3 +17,10 @@ Exception occurred:           	         0
 Time out:                     	       134
 
 A-star with (mse)square:
+==============================        Result Summary        ==============================
+Total number of scenarios:  	       500
+Solution found:               	       357
+Solution found but invalid:   	         0
+Solution not found:           	        19
+Exception occurred:           	         0
+Time out:                     	       123
