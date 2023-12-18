@@ -34,9 +34,9 @@ class StudentMotionPlanner(AStarSearch):
                 return np.inf
             
             else:
-                return self.calc_mean_squared_error(current_node=node_current) / velocity
+                return self.calc_mean_squared_error_square(current_node=node_current) / velocity
     
-    def calc_mean_squared_error(self, current_node: PriorityNode) -> float:
+    def calc_mean_squared_error_square(self, current_node: PriorityNode) -> float:
         """
         Calculates the mean square error of the vehicle center to the desired goal position. The attribute
         self.position_desired is extracted from the planning problem (see method self.parse_planning_problem() )
