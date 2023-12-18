@@ -1,0 +1,10 @@
+A-star:
+==============================        Result Summary        ==============================
+Total number of scenarios:  	       500
+Solution found:               	       322
+Solution found but invalid:   	         0
+Solution not found:           	        19
+Exception occurred:           	         0
+Time out:                     	       157
+
+A-star with mse error:
