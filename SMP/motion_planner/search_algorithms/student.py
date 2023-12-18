@@ -60,4 +60,4 @@ class StudentMotionPlanner(AStarSearch):
         else:
             delta_y = min([abs(self.position_desired[1].start - pos_veh_center[1]), abs(self.position_desired[1].end - pos_veh_center[1])])
         
-        return 0.5 * (delta_x ** 2 + delta_y ** 2)
+        return (0.5 * (delta_x ** 2 + delta_y ** 2) ** 2) ** 2
