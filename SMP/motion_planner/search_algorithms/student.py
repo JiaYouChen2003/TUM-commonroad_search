@@ -2,30 +2,18 @@ import numpy as np
 from SMP.motion_planner.node import PriorityNode
 
 from SMP.motion_planner.plot_config import DefaultPlotConfig
-from SMP.motion_planner.search_algorithms.best_first_search import GreedyBestFirstSearch
+from SMP.motion_planner.search_algorithms.best_first_search import AStarSearch
 
 
-class StudentMotionPlanner(GreedyBestFirstSearch):
+class StudentMotionPlanner(AStarSearch):
     """
     Motion planner implementation by students.
     Note that you may inherit from any given motion planner as you wish, or come up with your own planner.
-    Here as an example, the planner is inherited from the GreedyBestFirstSearch planner.
+    Here as an example, the planner is inherited from the AStarSearch planner.
     """
     
     def __init__(self, scenario, planningProblem, automata, plot_config=DefaultPlotConfig):
         super().__init__(scenario=scenario, planningProblem=planningProblem, automaton=automata, plot_config=plot_config)
-    
-    def evaluation_function(self, node_current: PriorityNode) -> float:
-        """
-        Evaluation function of A* is f(n) = g(n) + h(n)
-        """
-        if self.reached_goal(node_current.list_paths[-1]):
-            node_current.list_paths = self.remove_states_behind_goal(node_current.list_paths)
-        # calculate g(n)
-        node_current.priority += (len(node_current.list_paths[-1]) - 1) * self.scenario.dt
-        
-        # f(n) = g(n) + h(n)
-        return node_current.priority + self.heuristic_function(node_current=node_current)
     
     def heuristic_function(self, node_current: PriorityNode) -> float:
         """
