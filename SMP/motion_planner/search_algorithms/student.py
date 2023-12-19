@@ -1,4 +1,5 @@
 import numpy as np
+from commonroad.scenario.lanelet import LaneletNetwork
 from SMP.motion_planner.node import PriorityNode
 
 from SMP.motion_planner.plot_config import DefaultPlotConfig
@@ -38,19 +39,22 @@ class StudentMotionPlanner(AStarSearch):
         if self.reached_goal(node_current.list_paths[-1]):
             return 0.0
         
-        if not self.is_collision_free(node_current.list_paths):
-            return np.inf
+        current_node_state = node_current.list_paths[-1][-1]
+        current_node_lanelet_id = self.scenario.lanelet_network.find_lanelet_by_position([current_node_state.position])[0][0]
+        
+        collide_dist = 0
+        if current_node_lanelet_id != None:
+            collide_dist = self.calc_dist_to_closest_obstacle(current_node_lanelet_id, current_node_state.position, current_node_state.time_step)
         
         if self.position_desired is None:
-            return self.time_desired.start - node_current.list_paths[-1][-1].time_step
+            return self.time_desired.start - current_node_state.time_step
         else:
-            velocity = node_current.list_paths[-1][-1].velocity
+            velocity = current_node_state.velocity
             
             if np.isclose(velocity, 0):
                 return np.inf
-            
             else:
-                return self.calc_mean_squared_error_square(current_node=node_current) / velocity
+                return self.calc_mean_squared_error_square(current_node=node_current) / velocity - collide_dist
     
     def calc_mean_squared_error_square(self, current_node: PriorityNode) -> float:
         """
