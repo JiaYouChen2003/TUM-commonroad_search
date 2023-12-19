@@ -24,3 +24,14 @@ Solution found but invalid:   	         0
 Solution not found:           	        19
 Exception occurred:           	         0
 Time out:                     	       123
+
+A-star with (mse)square, f(n) weight[3, 1]:
+==============================        Result Summary        ==============================
+Total number of scenarios:  	       500
+Solution found:               	       353
+Solution found but invalid:   	         0
+Solution not found:           	        19
+Exception occurred:           	         0
+Time out:                     	       127
+
+A-star with (mse)square, collision free prune:

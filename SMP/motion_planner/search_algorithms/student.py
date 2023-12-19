@@ -15,6 +15,19 @@ class StudentMotionPlanner(AStarSearch):
     def __init__(self, scenario, planningProblem, automata, plot_config=DefaultPlotConfig):
         super().__init__(scenario=scenario, planningProblem=planningProblem, automaton=automata, plot_config=plot_config)
     
+    def evaluation_function(self, node_current: PriorityNode) -> float:
+        """
+        Evaluation function of A* is f(n) = g(n) + h(n)
+        """
+        if self.reached_goal(node_current.list_paths[-1]):
+            node_current.list_paths = self.remove_states_behind_goal(node_current.list_paths)
+        # calculate g(n)
+        node_current.priority += (len(node_current.list_paths[-1]) - 1) * self.scenario.dt
+        
+        # f(n) = w_g * g(n) + w_h * h(n)
+        weight = [1, 1]
+        return weight[0] * node_current.priority + weight[1] * self.heuristic_function(node_current=node_current)
+    
     def heuristic_function(self, node_current: PriorityNode) -> float:
         """
         Function that evaluates the heuristic cost h(n) in inherited classes.
@@ -24,6 +37,9 @@ class StudentMotionPlanner(AStarSearch):
         """
         if self.reached_goal(node_current.list_paths[-1]):
             return 0.0
+        
+        if not self.is_collision_free(node_current.list_paths):
+            return np.inf
         
         if self.position_desired is None:
             return self.time_desired.start - node_current.list_paths[-1][-1].time_step
@@ -42,7 +58,7 @@ class StudentMotionPlanner(AStarSearch):
         self.position_desired is extracted from the planning problem (see method self.parse_planning_problem() )
         
         @param current_node:
-        @return: mean square error
+        @return: mean square error square
         """
         current_node_state = current_node.list_paths[-1][-1]    # get last state in current path
         pos = current_node_state.position                       # get (rear axis) position of last state
