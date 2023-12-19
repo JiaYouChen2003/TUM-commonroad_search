@@ -26,8 +26,8 @@ class StudentMotionPlanner(AStarSearch):
         node_current.priority += (len(node_current.list_paths[-1]) - 1) * self.scenario.dt
         
         # f(n) = w_g * g(n) + w_h * h(n)
-        weight = [1, 1]
-        return weight[0] * node_current.priority + weight[1] * self.heuristic_function(node_current=node_current)
+        weight_f = [1, 1]
+        return weight_f[0] * node_current.priority + weight_f[1] * self.heuristic_function(node_current=node_current)
     
     def heuristic_function(self, node_current: PriorityNode) -> float:
         """
